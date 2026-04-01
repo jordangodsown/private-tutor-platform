@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - EduTutor{% endblock %}
+
+{% block content %}
+<div class="container my-5 fade-in">
+    <!-- Welcome Banner -->
+    <div class="mb-5 rounded-4 shadow-sm overflow-hidden border" style="height: 250px; background: url('https://images.unsplash.com/photo-1513258496099-48168024aec0?auto=format&fit=crop&q=80&w=2000') center/cover;">
+    </div>
+    <div class="row mb-5 align-items-center">
+        <div class="col-md-8">
+            <h2 class="fw-bold text-dark display-6">Welcome, <span class="text-primary">{{ current_user.username }}</span>! 👋</h2>
+            <p class="text-muted fs-5">Here is your <strong class="text-dark">{{ current_user.role|capitalize }}</strong> dashboard.</p>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary fs-6 py-2 px-4 rounded-pill shadow-sm">{{ current_user.role|capitalize }} Account</span>
+        </div>
+    </div>
+
+    <div class="row g-4 slide-up">
+        {% if current_user.role == 'tutor' %}
+        <!-- Tutor Profile Section -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm feature-card p-4 h-100">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-4 text-dark d-flex align-items-center">
+                        <span class="me-2 fs-4">⚙️</span> Tutor Profile
+                    </h5>
+                    <form action="{{ url_for('update_profile') }}" method="POST" enctype="multipart/form-data">
+                        <div class="mb-4 text-center">
+                            {% if current_user.tutor_profile.profile_photo and current_user.tutor_profile.profile_photo != 'default.jpg' %}
+                                <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.tutor_profile.profile_photo) }}" alt="Profile Photo" class="rounded-circle mb-3 object-fit-cover shadow-sm border" style="width: 100px; height: 100px;">
+                            {% else %}
+                                <img src="https://ui-avatars.com/api/?name={{ current_user.username }}&background=0d6efd&color=fff&size=100&bold=true" alt="Default Avatar" class="rounded-circle mb-3 object-fit-cover shadow-sm border" style="width: 100px; height: 100px;">
+                            {% endif %}
+                            <input class="form-control form-control-sm custom-input" type="file" name="profile_photo" accept="image/*">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted fw-bold small">Subjects Taught</label>
+                            <input type="text" name="subjects" class="form-control custom-input" value="{{ current_user.tutor_profile.subjects or '' }}" placeholder="Comma separated">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted fw-bold small">Hourly Rate ($)</label>
+                            <input type="number" step="0.01" name="hourly_rate" class="form-control custom-input" value="{{ current_user.tutor_profile.hourly_rate or '' }}" placeholder="20.00">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-muted fw-bold small">Bio</label>
+                            <textarea name="bio" class="form-control custom-input" rows="4" placeholder="Tell students about yourself...">{{ current_user.tutor_profile.bio or '' }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 fw-bold rounded-pill shadow-sm py-2">Update Profile</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Bookings Section -->
+        <div class="col-lg-{% if current_user.role == 'student' %}12{% else %}8{% endif %}">
+            <div class="card border-0 shadow-sm feature-card p-4 h-100">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-4 text-dark d-flex align-items-center">
+                        <span class="me-2 fs-4">📅</span> Your Sessions
+                    </h5>
+                    
+                    <ul class="nav nav-pills nav-fill bg-light rounded-pill p-1 mb-4 shadow-sm" id="pills-tab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active rounded-pill fw-bold px-4 py-2" id="upcoming-tab" data-bs-toggle="pill" data-bs-target="#upcoming" type="button" role="tab" style="transition: all 0.3s;">Upcoming & Pending</button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content mt-2" id="pills-tabContent">
+                        <div class="tab-pane fade show active" id="upcoming" role="tabpanel">
+                            {% if bookings %}
+                                <div class="list-group list-group-flush">
+                                {% for booking in bookings %}
+                                    <div class="list-group-item px-3 py-4 border-bottom-0 mb-3 rounded-4 bg-white border shadow-sm">
+                                        <div class="d-flex w-100 justify-content-between align-items-center">
+                                            <div>
+                                                <h5 class="mb-1 fw-bold text-dark">{{ booking.subject }}</h5>
+                                                <small class="text-muted d-block mb-1 fs-6">
+                                                    <span class="me-3">📅 {{ booking.date.strftime('%b %d, %Y') }}</span>
+                                                    <span>⏰ {{ booking.time.strftime('%I:%M %p') }}</span>
+                                                </small>
+                                                <div class="mt-2 text-dark opacity-75">
+                                                    {% if current_user.role == 'student' %}
+                                                        Tutor: <strong class="text-primary">{{ booking.tutor.user.username }}</strong>
+                                                    {% else %}
+                                                        Student: <strong class="text-primary">{{ booking.student.username }}</strong>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="text-end d-flex flex-column align-items-end">
+                                                <span class="badge fs-6 px-3 py-2 rounded-pill shadow-sm mb-2
+                                                    {% if booking.status == 'pending' %}bg-warning text-dark
+                                                    {% elif booking.status == 'confirmed' %}bg-success
+                                                    {% else %}bg-secondary{% endif %}">
+                                                    {{ booking.status|capitalize }}
+                                                </span>
+                                                {% if current_user.role == 'tutor' and booking.status == 'pending' %}
+                                                    <form action="{{ url_for('update_booking_status', booking_id=booking.id) }}" method="POST" class="mt-2">
+                                                        <input type="hidden" name="status" value="confirmed">
+                                                        <button type="submit" class="btn btn-success btn-sm rounded-pill px-4 fw-bold shadow-sm">Accept Session</button>
+                                                    </form>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                                </div>
+                            {% else %}
+                                <div class="text-center py-5 bg-white rounded-4 border">
+                                    <img src="https://images.unsplash.com/photo-1497215848143-3453b3670695?auto=format&fit=crop&q=80&w=400" alt="Empty Workspace" class="img-fluid rounded-4 mb-4 shadow-sm" style="height: 180px; width: 280px; object-fit: cover;">
+                                    <h5 class="text-muted fw-bold">No sessions scheduled.</h5>
+                                    {% if current_user.role == 'student' %}
+                                    <a href="{{ url_for('tutors') }}" class="btn btn-primary mt-3 rounded-pill px-4 fw-bold shadow-sm">Find a Tutor Now</a>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

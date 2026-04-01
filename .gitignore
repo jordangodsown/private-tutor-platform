@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.env
+private_tutor.db
+my-new-project/
+.venv/
+venv/
+env/

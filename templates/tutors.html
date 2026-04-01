@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}Find Tutors - EduTutor{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row mb-5 align-items-center">
+        <div class="col-md-6">
+            <h2 class="fw-bold text-dark display-6 fade-in">Available Tutors</h2>
+            {% if query %}
+            <p class="text-muted fs-5 slide-up">Showing results for: <strong class="text-primary">{{ query }}</strong>
+            </p>
+            {% endif %}
+        </div>
+        <div class="col-md-6 text-md-end fade-in">
+            <form action="{{ url_for('tutors') }}" method="GET" class="d-flex justify-content-md-end">
+                <input type="text" name="subject" value="{{ query }}"
+                    class="form-control w-auto me-2 custom-input shadow-sm" placeholder="Search subject...">
+                <button type="submit" class="btn btn-outline-primary fw-bold shadow-sm px-4">Filter</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row g-4 slide-up">
+        {% if tutors %}
+        {% for tutor in tutors %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm feature-card p-3 custom-card">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex align-items-center mb-3">
+                        {% if tutor.profile_photo and tutor.profile_photo != 'default.jpg' %}
+                        <img src="{{ url_for('static', filename='uploads/profiles/' + tutor.profile_photo) }}"
+                            alt="Profile Photo" class="rounded-circle me-3 object-fit-cover shadow-sm border"
+                            style="width: 55px; height: 55px;">
+                        {% else %}
+                        <img src="https://ui-avatars.com/api/?name={{ tutor.user.username }}&background=0d6efd&color=fff&size=100&bold=true"
+                            alt="Default Avatar" class="rounded-circle me-3 object-fit-cover shadow-sm border"
+                            style="width: 55px; height: 55px;">
+                        {% endif %}
+                        <div>
+                            <h5 class="card-title fw-bold mb-0 text-dark">{{ tutor.user.username }}</h5>
+                            {% if tutor.verified_status %}
+                            <span class="badge bg-success mt-1 rounded-pill px-2">✓ Verified</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <p class="text-primary fw-bold mb-2">🎓 {{ tutor.subjects if tutor.subjects else 'No subjects
+                        listed' }}</p>
+                    <p class="card-text text-muted small mb-3 flex-grow-1">{{ tutor.bio[:100] ~ '...' if tutor.bio else
+                        'No bio available.' }}</p>
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+                        <span class="fs-5 fw-bold text-dark">${{ tutor.hourly_rate if tutor.hourly_rate else '0'
+                            }}/hr</span>
+                        {% if current_user.is_authenticated and current_user.role == 'student' %}
+                        <button class="btn btn-primary btn-sm px-4 rounded-pill fw-bold shadow-sm"
+                            data-bs-toggle="modal" data-bs-target="#bookModal{{ tutor.id }}">Book Now</button>
+                        {% elif not current_user.is_authenticated %}
+                        <a href="{{ url_for('login') }}"
+                            class="btn btn-outline-primary btn-sm px-3 rounded-pill fw-bold">Login to Book</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking Modal for {{ tutor.user.username }} -->
+        <div class="modal fade" id="bookModal{{ tutor.id }}" tabindex="-1"
+            aria-labelledby="bookModalLabel{{ tutor.id }}" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg" style="border-radius: 1.5rem;">
+                    <div class="modal-header border-0 pb-0 pt-4 px-4">
+                        <h5 class="modal-title fw-bold text-dark" id="bookModalLabel{{ tutor.id }}">Book a Session with
+                            {{ tutor.user.username }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <form action="{{ url_for('book_tutor', tutor_id=tutor.id) }}" method="POST">
+                            <div class="mb-3">
+                                <label class="form-label text-muted fw-bold small">Subject to Learn</label>
+                                <input type="text" name="subject" class="form-control custom-input py-2" required
+                                    placeholder="E.g., Math 101">
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-6">
+                                    <label class="form-label text-muted fw-bold small">Date</label>
+                                    <input type="date" name="date" class="form-control custom-input py-2" required>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label text-muted fw-bold small">Time</label>
+                                    <input type="time" name="time" class="form-control custom-input py-2" required>
+                                </div>
+                            </div>
+                            <div class="d-grid mt-4 pt-2">
+                                <button type="submit"
+                                    class="btn btn-primary py-3 rounded-pill fw-bold shadow-sm fs-6">Request
+                                    Booking</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="col-12 text-center py-5 fade-in">
+            <div class="text-muted display-4 mb-3">😕</div>
+            <h4 class="text-muted fw-bold">No tutors found for your search.</h4>
+            <a href="{{ url_for('tutors') }}" class="btn btn-primary mt-3 rounded-pill px-4 fw-bold shadow-sm">View All
+                Tutors</a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - EduTutor{% endblock %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center mb-5" style="min-height: 80vh;">
+    <div class="card p-5 shadow-lg glass-card fade-in" style="width: 100%; max-width: 450px; border-radius: 1.5rem; border: 1px solid rgba(255,255,255,0.2);">
+        <h2 class="text-center mb-4 fw-bold">Welcome Back</h2>
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="mb-3">
+                <label for="email" class="form-label text-muted">Email address</label>
+                <input type="email" class="form-control form-control-lg custom-input" id="email" name="email" required placeholder="name@example.com">
+            </div>
+            <div class="mb-4">
+                <label for="password" class="form-label text-muted">Password</label>
+                <input type="password" class="form-control form-control-lg custom-input" id="password" name="password" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm rounded-pill mt-2">Sign In</button>
+        </form>
+        <div class="text-center mt-4 pt-3 border-top">
+            <p class="text-muted mb-0">Don't have an account? <a href="{{ url_for('register') }}" class="text-primary fw-bold text-decoration-none">Sign up</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
