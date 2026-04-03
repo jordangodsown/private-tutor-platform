@@ -8,8 +8,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from flask_mail import Mail, Message
-from models import db, User, TutorProfile, Booking, Review
+from flask_mail import Mail, Message as MailMessage
+from models import db, User, TutorProfile, Booking, Review, Message, Notification
 
 from datetime import datetime
 
@@ -17,7 +17,10 @@ app = Flask(__name__)
 # Secret key for session management
 app.config['SECRET_KEY'] = 'super-secret-key-for-dev' # Change in production
 BaseDir = os.path.abspath(os.path.dirname(__file__))
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(BaseDir, 'private_tutor.db')
+database_url = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(BaseDir, 'private_tutor.db'))
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Mail config (Using env vars, or placeholders to be filled)
@@ -47,6 +50,13 @@ def load_user(user_id):
 # Initialize Database Context
 with app.app_context():
     db.create_all()
+
+@app.context_processor
+def inject_notifications():
+    if current_user.is_authenticated:
+        unread_notifications = Notification.query.filter_by(user_id=current_user.id, is_read=False).order_by(Notification.created_at.desc()).all()
+        return dict(unread_notifications=unread_notifications, unread_count=len(unread_notifications))
+    return dict(unread_notifications=[], unread_count=0)
 
 @app.route('/')
 def index():
@@ -124,7 +134,9 @@ def dashboard():
         bookings = Booking.query.filter_by(student_id=current_user.id).order_by(Booking.date.asc()).all()
     else:
         bookings = Booking.query.filter_by(tutor_id=current_user.tutor_profile.id).order_by(Booking.date.asc()).all()
-    return render_template('dashboard.html', bookings=bookings)
+
+    messages = Message.query.filter((Message.receiver_id == current_user.id) | (Message.sender_id == current_user.id)).order_by(Message.timestamp.desc()).all()
+    return render_template('dashboard.html', bookings=bookings, messages=messages)
 
 @app.route('/book_tutor/<int:tutor_id>', methods=['POST'])
 @login_required
@@ -150,10 +162,19 @@ def book_tutor(tutor_id):
     db.session.add(new_booking)
     db.session.commit()
     
-    # Send email to tutor
+    # Create notification for tutor
     tutor_profile = TutorProfile.query.get(tutor_id)
+    if tutor_profile:
+        notification = Notification(
+            user_id=tutor_profile.user.id,
+            message=f"New tutoring request from {current_user.username} for {subject}."
+        )
+        db.session.add(notification)
+        db.session.commit()
+    
+    # Send email to tutor
     if tutor_profile and tutor_profile.user.email:
-        msg = Message('New Tutoring Session Request', recipients=[tutor_profile.user.email])
+        msg = MailMessage('New Tutoring Session Request', recipients=[tutor_profile.user.email])
         msg.body = f"Hello {tutor_profile.user.username},\n\nYou have a new tutoring session request from {current_user.username} for {subject} on {booking_date} at {booking_time}.\nPlease log in to your dashboard to confirm or decline."
         try:
             mail.send(msg)
@@ -214,10 +235,18 @@ def update_booking_status(booking_id):
     booking.status = status
     db.session.commit()
     
+    student_user = booking.student
+    if student_user:
+        notification = Notification(
+            user_id=student_user.id,
+            message=f"Your {booking.subject} session was {status} by your tutor."
+        )
+        db.session.add(notification)
+        db.session.commit()
+    
     if status == 'confirmed':
-        student_user = booking.student
         if student_user and student_user.email:
-            msg = Message('Tutoring Session Confirmed', recipients=[student_user.email])
+            msg = MailMessage('Tutoring Session Confirmed', recipients=[student_user.email])
             msg.body = f"Hello {student_user.username},\n\nYour tutoring session for {booking.subject} on {booking.date} at {booking.time} has been confirmed by your tutor.\n\nSee you then!"
             try:
                 mail.send(msg)
@@ -226,6 +255,31 @@ def update_booking_status(booking_id):
     
     flash('Booking status updated.', 'success')
     return redirect(url_for('dashboard'))
+
+@app.route('/notifications/read/<int:notif_id>', methods=['POST'])
+@login_required
+def read_notification(notif_id):
+    notif = Notification.query.get_or_404(notif_id)
+    if notif.user_id == current_user.id:
+        notif.is_read = True
+        db.session.commit()
+    return redirect(request.referrer or url_for('dashboard'))
+
+@app.route('/send_message/<int:receiver_id>', methods=['POST'])
+@login_required
+def send_message(receiver_id):
+    content = request.form.get('content')
+    if content:
+        msg = Message(sender_id=current_user.id, receiver_id=receiver_id, content=content)
+        db.session.add(msg)
+        notification = Notification(
+            user_id=receiver_id,
+            message=f"New message from {current_user.username}"
+        )
+        db.session.add(notification)
+        db.session.commit()
+        flash('Message sent!', 'success')
+    return redirect(request.referrer or url_for('dashboard'))
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -15,6 +15,9 @@ class User(db.Model, UserMixin):
     # Relationships
     tutor_profile = db.relationship('TutorProfile', backref='user', uselist=False, cascade='all, delete-orphan')
     student_bookings = db.relationship('Booking', foreign_keys='Booking.student_id', backref='student', lazy=True)
+    notifications = db.relationship('Notification', backref='user', lazy=True)
+    messages_sent = db.relationship('Message', foreign_keys='Message.sender_id', backref='sender', lazy=True)
+    messages_received = db.relationship('Message', foreign_keys='Message.receiver_id', backref='receiver', lazy=True)
 
 class TutorProfile(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -45,4 +48,18 @@ class Review(db.Model):
     tutor_profile_id = db.Column(db.Integer, db.ForeignKey('tutor_profile.id'), nullable=False)
     rating = db.Column(db.Integer, nullable=False) # 1-5
     comment = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Message(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    message = db.Column(db.String(255), nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
