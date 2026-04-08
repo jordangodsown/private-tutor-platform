@@ -9,7 +9,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from flask_mail import Mail, Message as MailMessage
-from models import db, User, TutorProfile, Booking, Review, Message, Notification
+from models import db, User, TutorProfile, StudentProfile, Booking, Review, Message, Notification
 
 from datetime import datetime
 
@@ -32,7 +32,7 @@ app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', 'your_app_password
 app.config['MAIL_DEFAULT_SENDER'] = app.config['MAIL_USERNAME']
 
 # Upload config
-app.config['UPLOAD_FOLDER'] = os.path.join('static', 'uploads', 'profiles')
+app.config['UPLOAD_FOLDER'] = os.path.join(BaseDir, 'static', 'uploads', 'profiles')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 # 16 MB limit
 
 # Initialize extensions
@@ -84,6 +84,10 @@ def register():
 
         if role == 'tutor':
             new_profile = TutorProfile(user_id=new_user.id)
+            db.session.add(new_profile)
+            db.session.commit()
+        elif role == 'student':
+            new_profile = StudentProfile(user_id=new_user.id)
             db.session.add(new_profile)
             db.session.commit()
 
@@ -190,19 +194,26 @@ def book_tutor(tutor_id):
 @app.route('/update_profile', methods=['POST'])
 @login_required
 def update_profile():
-    if current_user.role != 'tutor':
-        flash('Unauthorized.', 'danger')
-        return redirect(url_for('dashboard'))
-        
-    subjects = request.form.get('subjects')
-    hourly_rate = request.form.get('hourly_rate')
     bio = request.form.get('bio')
     profile_photo = request.files.get('profile_photo')
     
-    profile = current_user.tutor_profile
-    profile.subjects = subjects
-    profile.hourly_rate = float(hourly_rate) if hourly_rate else 0.0
-    profile.bio = bio
+    if current_user.role == 'tutor':
+        subjects = request.form.get('subjects')
+        hourly_rate = request.form.get('hourly_rate')
+        
+        profile = current_user.tutor_profile
+        profile.subjects = subjects
+        profile.hourly_rate = float(hourly_rate) if hourly_rate else 0.0
+        profile.bio = bio
+    elif current_user.role == 'student':
+        grade_level = request.form.get('grade_level')
+        
+        profile = current_user.student_profile
+        profile.grade_level = grade_level
+        profile.bio = bio
+    else:
+        flash('Unauthorized.', 'danger')
+        return redirect(url_for('dashboard'))
     
     if profile_photo and profile_photo.filename != '':
         filename = secure_filename(profile_photo.filename)

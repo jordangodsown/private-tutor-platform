@@ -18,44 +18,50 @@
     </div>
 
     <div class="row g-4 slide-up">
-        {% if current_user.role == 'tutor' %}
-        <!-- Tutor Profile Section -->
+        <!-- Profile Section -->
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm feature-card p-4 h-100">
                 <div class="card-body">
                     <h5 class="fw-bold mb-4 text-dark d-flex align-items-center">
-                        <span class="me-2 fs-4">⚙️</span> Tutor Profile
+                        <span class="me-2 fs-4">⚙️</span> {{ current_user.role|capitalize }} Profile
                     </h5>
                     <form action="{{ url_for('update_profile') }}" method="POST" enctype="multipart/form-data">
                         <div class="mb-4 text-center">
-                            {% if current_user.tutor_profile.profile_photo and current_user.tutor_profile.profile_photo != 'default.jpg' %}
-                                <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.tutor_profile.profile_photo) }}" alt="Profile Photo" class="rounded-circle mb-3 object-fit-cover shadow-sm border" style="width: 100px; height: 100px;">
+                            {% set profile = current_user.tutor_profile if current_user.role == 'tutor' else current_user.student_profile %}
+                            {% if profile and profile.profile_photo and profile.profile_photo != 'default.jpg' %}
+                                <img src="{{ url_for('static', filename='uploads/profiles/' + profile.profile_photo) }}" alt="Profile Photo" class="rounded-circle mb-3 object-fit-cover shadow-sm border" style="width: 100px; height: 100px;">
                             {% else %}
                                 <img src="https://ui-avatars.com/api/?name={{ current_user.username }}&background=0d6efd&color=fff&size=100&bold=true" alt="Default Avatar" class="rounded-circle mb-3 object-fit-cover shadow-sm border" style="width: 100px; height: 100px;">
                             {% endif %}
                             <input class="form-control form-control-sm custom-input" type="file" name="profile_photo" accept="image/*">
                         </div>
+                        {% if current_user.role == 'tutor' %}
                         <div class="mb-3">
                             <label class="form-label text-muted fw-bold small">Subjects Taught</label>
-                            <input type="text" name="subjects" class="form-control custom-input" value="{{ current_user.tutor_profile.subjects or '' }}" placeholder="Comma separated">
+                            <input type="text" name="subjects" class="form-control custom-input" value="{{ profile.subjects or '' }}" placeholder="Comma separated">
                         </div>
                         <div class="mb-3">
                             <label class="form-label text-muted fw-bold small">Hourly Rate ($)</label>
-                            <input type="number" step="0.01" name="hourly_rate" class="form-control custom-input" value="{{ current_user.tutor_profile.hourly_rate or '' }}" placeholder="20.00">
+                            <input type="number" step="0.01" name="hourly_rate" class="form-control custom-input" value="{{ profile.hourly_rate or '' }}" placeholder="20.00">
                         </div>
+                        {% else %}
+                        <div class="mb-3">
+                            <label class="form-label text-muted fw-bold small">Grade Level / Education</label>
+                            <input type="text" name="grade_level" class="form-control custom-input" value="{{ profile.grade_level or '' }}" placeholder="e.g. High School, College">
+                        </div>
+                        {% endif %}
                         <div class="mb-4">
                             <label class="form-label text-muted fw-bold small">Bio</label>
-                            <textarea name="bio" class="form-control custom-input" rows="4" placeholder="Tell students about yourself...">{{ current_user.tutor_profile.bio or '' }}</textarea>
+                            <textarea name="bio" class="form-control custom-input" rows="4" placeholder="Tell {% if current_user.role == 'tutor' %}students{% else %}tutors{% endif %} about yourself...">{{ profile.bio or '' }}</textarea>
                         </div>
                         <button type="submit" class="btn btn-primary w-100 fw-bold rounded-pill shadow-sm py-2">Update Profile</button>
                     </form>
                 </div>
             </div>
         </div>
-        {% endif %}
 
         <!-- Bookings Section -->
-        <div class="col-lg-{% if current_user.role == 'student' %}12{% else %}8{% endif %}">
+        <div class="col-lg-8">
             <div class="card border-0 shadow-sm feature-card p-4 h-100">
                 <div class="card-body">
                     <h5 class="fw-bold mb-4 text-dark d-flex align-items-center">

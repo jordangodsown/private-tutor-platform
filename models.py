@@ -14,6 +14,7 @@ class User(db.Model, UserMixin):
 
     # Relationships
     tutor_profile = db.relationship('TutorProfile', backref='user', uselist=False, cascade='all, delete-orphan')
+    student_profile = db.relationship('StudentProfile', backref='user', uselist=False, cascade='all, delete-orphan')
     student_bookings = db.relationship('Booking', foreign_keys='Booking.student_id', backref='student', lazy=True)
     notifications = db.relationship('Notification', backref='user', lazy=True)
     messages_sent = db.relationship('Message', foreign_keys='Message.sender_id', backref='sender', lazy=True)
@@ -31,6 +32,13 @@ class TutorProfile(db.Model):
     # Relationships
     tutor_bookings = db.relationship('Booking', foreign_keys='Booking.tutor_id', backref='tutor', lazy=True)
     reviews = db.relationship('Review', backref='tutor_profile', lazy=True)
+
+class StudentProfile(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    bio = db.Column(db.Text, nullable=True)
+    grade_level = db.Column(db.String(100), nullable=True)
+    profile_photo = db.Column(db.String(255), nullable=True, default='default.jpg')
 
 class Booking(db.Model):
     id = db.Column(db.Integer, primary_key=True)
