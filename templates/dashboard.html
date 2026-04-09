@@ -26,6 +26,7 @@
                         <span class="me-2 fs-4">⚙️</span> {{ current_user.role|capitalize }} Profile
                     </h5>
                     <form action="{{ url_for('update_profile') }}" method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                         <div class="mb-4 text-center">
                             {% set profile = current_user.tutor_profile if current_user.role == 'tutor' else current_user.student_profile %}
                             {% if profile and profile.profile_photo and profile.profile_photo != 'default.jpg' %}
@@ -108,6 +109,7 @@
                                                 </span>
                                                 {% if current_user.role == 'tutor' and booking.status == 'pending' %}
                                                     <form action="{{ url_for('update_booking_status', booking_id=booking.id) }}" method="POST" class="mt-2">
+                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                                                         <input type="hidden" name="status" value="confirmed">
                                                         <button type="submit" class="btn btn-success btn-sm rounded-pill px-4 fw-bold shadow-sm">Accept Session</button>
                                                     </form>
@@ -172,6 +174,7 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <form action="{{ url_for('send_message', receiver_id=booking.tutor.user.id if current_user.role == 'student' else booking.student.id) }}" method="POST">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
               <div class="modal-body">
                 <textarea class="form-control rounded-3" name="content" rows="4" placeholder="Type your message here..." required></textarea>
               </div>

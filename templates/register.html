@@ -7,6 +7,7 @@
     <div class="card p-5 shadow-lg glass-card fade-in" style="width: 100%; max-width: 500px; border-radius: 1.5rem; border: 1px solid rgba(255,255,255,0.2);">
         <h2 class="text-center mb-4 fw-bold">Create an Account</h2>
         <form method="POST" action="{{ url_for('register') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="mb-3">
                 <label for="username" class="form-label text-muted">Full Name / Username</label>
                 <input type="text" class="form-control form-control-lg custom-input" id="username" name="username" required placeholder="John Doe">

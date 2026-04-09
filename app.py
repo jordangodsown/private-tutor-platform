@@ -6,6 +6,7 @@ load_dotenv()
 from flask import Flask, render_template, redirect, url_for, flash, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from flask_mail import Mail, Message as MailMessage
@@ -14,6 +15,7 @@ from models import db, User, TutorProfile, StudentProfile, Booking, Review, Mess
 from datetime import datetime
 
 app = Flask(__name__)
+csrf = CSRFProtect(app)
 # Secret key for session management
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'super-secret-key-for-dev')
 BaseDir = os.path.abspath(os.path.dirname(__file__))
