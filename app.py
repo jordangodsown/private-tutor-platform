@@ -15,7 +15,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 # Secret key for session management
-app.config['SECRET_KEY'] = 'super-secret-key-for-dev' # Change in production
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'super-secret-key-for-dev')
 BaseDir = os.path.abspath(os.path.dirname(__file__))
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(BaseDir, 'private_tutor.db'))
 if database_url.startswith("postgres://"):
