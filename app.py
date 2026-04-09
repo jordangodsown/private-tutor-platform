@@ -158,6 +158,12 @@ def book_tutor(tutor_id):
     if current_user.role != 'student':
         flash('Only students can book tutors.', 'warning')
         return redirect(url_for('tutors'))
+    
+    # Check if tutor exists
+    tutor_profile = TutorProfile.query.get(tutor_id)
+    if not tutor_profile:
+        flash('Tutor not found. Please try again.', 'danger')
+        return redirect(url_for('tutors'))
         
     subject = request.form.get('subject')
     date_str = request.form.get('date')
@@ -204,18 +210,21 @@ def book_tutor(tutor_id):
             db.session.rollback()
             print(f"Database error creating notification: {e}")
     
-    # Send email to tutor
-    if tutor_profile and tutor_profile.user and tutor_profile.user.email:
-        msg = MailMessage('New Tutoring Session Request', recipients=[tutor_profile.user.email])
-        msg.body = f"Hello {tutor_profile.user.username},\n\nYou have a new tutoring session request from {current_user.username} for {subject} on {booking_date} at {booking_time}.\nPlease log in to your dashboard to confirm or decline."
-        try:
-            mail.send(msg)
-            flash('Booking request and email sent successfully!', 'success')
-        except Exception as e:
-            print(f"Error sending email: {e}")
-            flash('Booking requested, but failed to send email alert. Ensure your .env file has a valid Gmail App Password!', 'warning')
+        # Send email to tutor
+        if tutor_profile.user and tutor_profile.user.email:
+            msg = MailMessage('New Tutoring Session Request', recipients=[tutor_profile.user.email])
+            msg.body = f"Hello {tutor_profile.user.username},\n\nYou have a new tutoring session request from {current_user.username} for {subject} on {booking_date} at {booking_time}.\nPlease log in to your dashboard to confirm or decline."
+            try:
+                mail.send(msg)
+                flash('Booking request and email sent successfully!', 'success')
+            except Exception as e:
+                print(f"Error sending email: {e}")
+                flash('Booking requested, but failed to send email alert. Ensure your .env file has a valid Gmail App Password!', 'warning')
+        else:
+            flash('Booking request sent successfully!', 'success')
     else:
-        flash('Booking request sent successfully!', 'success')
+        flash('Tutor not found. Please try again.', 'danger')
+        return redirect(url_for('tutors'))
         
     return redirect(url_for('dashboard'))
 
