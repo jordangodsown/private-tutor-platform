@@ -19,9 +19,16 @@ csrf = CSRFProtect(app)
 # Secret key for session management
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'super-secret-key-for-dev')
 BaseDir = os.path.abspath(os.path.dirname(__file__))
-database_url = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(BaseDir, 'private_tutor.db'))
-if database_url.startswith("postgres://"):
-    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+# Database configuration
+if os.environ.get('DATABASE_URL'):
+    database_url = os.environ.get('DATABASE_URL')
+    if database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql://", 1)
+else:
+    # Local development only - SQLite fallback
+    database_url = 'sqlite:///' + os.path.join(BaseDir, 'private_tutor.db')
+
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_pre_ping': True}
