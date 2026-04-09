@@ -10,7 +10,8 @@ from flask_wtf.csrf import CSRFProtect
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 from flask_mail import Mail, Message as MailMessage
-from models import db, User, TutorProfile, StudentProfile, Booking, Review, Message, Notification
+from models import db, User, TutorProfile, StudentProfile, Booking, Review, Message, Notification, IDVerification
+from functools import wraps
 
 from datetime import datetime
 
@@ -334,6 +335,164 @@ def send_message(receiver_id):
         db.session.commit()
         flash('Message sent!', 'success')
     return redirect(request.referrer or url_for('dashboard'))
+
+# Admin Authentication Decorator
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            flash('You must be an admin to access this page.', 'danger')
+            return redirect(url_for('index'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# ADMIN PANEL ROUTES
+@app.route('/admin')
+@admin_required
+def admin_panel():
+    users = User.query.all()
+    pending_verifications = IDVerification.query.filter_by(status='pending').all()
+    return render_template('admin.html', users=users, pending_verifications=pending_verifications)
+
+@app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
+@admin_required
+def admin_delete_user(user_id):
+    if user_id == current_user.id:
+        flash('You cannot delete your own account.', 'danger')
+        return redirect(url_for('admin_panel'))
+    
+    user = User.query.get_or_404(user_id)
+    username = user.username
+    db.session.delete(user)
+    db.session.commit()
+    flash(f'User {username} deleted successfully.', 'success')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/promote_admin/<int:user_id>', methods=['POST'])
+@admin_required
+def admin_promote_user(user_id):
+    user = User.query.get_or_404(user_id)
+    user.is_admin = True
+    db.session.commit()
+    flash(f'User {user.username} promoted to admin.', 'success')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/demote_admin/<int:user_id>', methods=['POST'])
+@admin_required
+def admin_demote_user(user_id):
+    if user_id == current_user.id:
+        flash('You cannot demote yourself.', 'danger')
+        return redirect(url_for('admin_panel'))
+    
+    user = User.query.get_or_404(user_id)
+    user.is_admin = False
+    db.session.commit()
+    flash(f'User {user.username} demoted from admin.', 'success')
+    return redirect(url_for('admin_panel'))
+
+@app.route('/tutor/upload_id', methods=['GET', 'POST'])
+@login_required
+def tutor_upload_id():
+    if current_user.role != 'tutor':
+        flash('Only tutors can upload ID documents.', 'warning')
+        return redirect(url_for('dashboard'))
+    
+    if request.method == 'POST':
+        id_document = request.files.get('id_document')
+        
+        if not id_document or id_document.filename == '':
+            flash('Please select a file to upload.', 'danger')
+            return redirect(url_for('tutor_upload_id'))
+        
+        # Allowed file extensions
+        ALLOWED_EXTENSIONS = {'pdf', 'jpg', 'jpeg', 'png', 'gif'}
+        if '.' not in id_document.filename or id_document.filename.rsplit('.', 1)[1].lower() not in ALLOWED_EXTENSIONS:
+            flash('Invalid file type. Please upload PDF, JPG, PNG, or GIF.', 'danger')
+            return redirect(url_for('tutor_upload_id'))
+        
+        try:
+            filename = secure_filename(id_document.filename)
+            unique_filename = f"{current_user.id}_id_{filename}"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+            id_document.save(filepath)
+            
+            # Update or create ID verification record
+            tutor_profile = current_user.tutor_profile
+            if tutor_profile:
+                tutor_profile.id_document = unique_filename
+                db.session.commit()
+                
+                # Create IDVerification record
+                existing_verification = IDVerification.query.filter_by(tutor_profile_id=tutor_profile.id).first()
+                if existing_verification:
+                    existing_verification.id_document = unique_filename
+                    existing_verification.submission_date = datetime.utcnow()
+                    existing_verification.status = 'pending'
+                else:
+                    verification = IDVerification(
+                        tutor_profile_id=tutor_profile.id,
+                        id_document=unique_filename,
+                        status='pending'
+                    )
+                    db.session.add(verification)
+                db.session.commit()
+                
+                flash('ID document uploaded successfully! Awaiting admin verification.', 'success')
+            else:
+                flash('Tutor profile not found.', 'danger')
+        except Exception as e:
+            print(f"Error uploading ID: {e}")
+            flash('An error occurred uploading your ID. Please try again.', 'danger')
+        
+        return redirect(url_for('tutor_upload_id'))
+    
+    tutor_profile = current_user.tutor_profile
+    id_verification = IDVerification.query.filter_by(tutor_profile_id=tutor_profile.id).first() if tutor_profile else None
+    return render_template('tutor_upload_id.html', id_verification=id_verification)
+
+@app.route('/admin/verify_tutor/<int:verification_id>', methods=['POST'])
+@admin_required
+def admin_verify_tutor(verification_id):
+    verification = IDVerification.query.get_or_404(verification_id)
+    action = request.form.get('action')  # 'approve' or 'reject'
+    admin_notes = request.form.get('admin_notes', '')
+    
+    if action == 'approve':
+        verification.status = 'approved'
+        verification.verified_by_admin = current_user.id
+        verification.admin_notes = admin_notes
+        verification.tutor_profile.id_verified = True
+        db.session.commit()
+        
+        # Send notification to tutor
+        tutor_user = verification.tutor_profile.user
+        notification = Notification(
+            user_id=tutor_user.id,
+            message=f"Your ID has been verified by admin! You are now a trusted tutor."
+        )
+        db.session.add(notification)
+        db.session.commit()
+        
+        flash(f'Tutor {tutor_user.username} verified successfully.', 'success')
+    elif action == 'reject':
+        verification.status = 'rejected'
+        verification.verified_by_admin = current_user.id
+        verification.admin_notes = admin_notes
+        db.session.commit()
+        
+        # Send notification to tutor
+        tutor_user = verification.tutor_profile.user
+        notification = Notification(
+            user_id=tutor_user.id,
+            message=f"Your ID verification was rejected. Reason: {admin_notes}"
+        )
+        db.session.add(notification)
+        db.session.commit()
+        
+        flash(f'Tutor {tutor_user.username} verification rejected.', 'success')
+    
+    return redirect(url_for('admin_panel'))
 
 if __name__ == '__main__':
     app.run(debug=True)

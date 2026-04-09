@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block title %}Admin Panel - EduTutor{% endblock %}
+
+{% block content %}
+<div class="container-fluid my-5">
+    <div class="row mb-5 align-items-center">
+        <div class="col">
+            <h2 class="fw-bold text-dark display-6">Admin Dashboard</h2>
+            <p class="text-muted">Manage users and tutor verifications</p>
+        </div>
+    </div>
+
+    <!-- Verification Requests Tab -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm feature-card p-4">
+                <h4 class="fw-bold text-dark mb-4 d-flex align-items-center">
+                    <span class="me-2 fs-5">📋</span> Pending Tutor Verifications
+                </h4>
+                {% if pending_verifications %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tutor Name</th>
+                                    <th>Email</th>
+                                    <th>ID Document</th>
+                                    <th>Submitted</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for verification in pending_verifications %}
+                                <tr>
+                                    <td class="fw-bold">{{ verification.tutor_profile.user.username }}</td>
+                                    <td>{{ verification.tutor_profile.user.email }}</td>
+                                    <td>
+                                        <a href="{{ url_for('static', filename='uploads/profiles/' + verification.id_document) }}" target="_blank" class="btn btn-sm btn-info rounded-pill">View Document</a>
+                                    </td>
+                                    <td><small class="text-muted">{{ verification.submission_date.strftime('%b %d, %Y') }}</small></td>
+                                    <td>
+                                        <form method="POST" action="{{ url_for('admin_verify_tutor', verification_id=verification.id) }}" class="d-inline">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                            <textarea name="admin_notes" class="form-control form-control-sm mb-2" rows="2" placeholder="Add notes (optional)..."></textarea>
+                                            <button type="submit" name="action" value="approve" class="btn btn-success btn-sm rounded-pill me-2">✓ Approve</button>
+                                            <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm rounded-pill">✕ Reject</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <p>No pending verifications.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Users Management Tab -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm feature-card p-4">
+                <h4 class="fw-bold text-dark mb-4 d-flex align-items-center">
+                    <span class="me-2 fs-5">👥</span> All Users
+                </h4>
+                {% if users %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Username</th>
+                                    <th>Email</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Joined</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in users %}
+                                <tr>
+                                    <td class="fw-bold">{{ user.username }}</td>
+                                    <td>{{ user.email }}</td>
+                                    <td>
+                                        <span class="badge {% if user.role == 'tutor' %}bg-primary{% else %}bg-secondary{% endif %} rounded-pill">
+                                            {{ user.role|capitalize }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if user.is_admin %}
+                                            <span class="badge bg-warning text-dark rounded-pill">🔐 Admin</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark rounded-pill">User</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small class="text-muted">{{ user.date_joined.strftime('%b %d, %Y') }}</small></td>
+                                    <td>
+                                        {% if user.id != current_user.id %}
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                {% if not user.is_admin %}
+                                                    <form method="POST" action="{{ url_for('admin_promote_user', user_id=user.id) }}" class="d-inline">
+                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                                        <button type="submit" class="btn btn-warning btn-sm rounded-pill" title="Promote to Admin">Promote</button>
+                                                    </form>
+                                                {% else %}
+                                                    <form method="POST" action="{{ url_for('admin_demote_user', user_id=user.id) }}" class="d-inline">
+                                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                                        <button type="submit" class="btn btn-secondary btn-sm rounded-pill" title="Demote from Admin">Demote</button>
+                                                    </form>
+                                                {% endif %}
+                                                <form method="POST" action="{{ url_for('admin_delete_user', user_id=user.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete this user?');">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                                    <button type="submit" class="btn btn-danger btn-sm rounded-pill" title="Delete User">Delete</button>
+                                                </form>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted small">(You)</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <p>No users found.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -10,6 +10,7 @@ class User(db.Model, UserMixin):
     email = db.Column(db.String(150), unique=True, nullable=False)
     password = db.Column(db.String(150), nullable=False)
     role = db.Column(db.String(50), nullable=False, default='student') # 'student' or 'tutor'
+    is_admin = db.Column(db.Boolean, default=False)
     date_joined = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -28,10 +29,13 @@ class TutorProfile(db.Model):
     hourly_rate = db.Column(db.Float, nullable=True)
     verified_status = db.Column(db.Boolean, default=False)
     profile_photo = db.Column(db.String(255), nullable=True, default='default.jpg')
+    id_document = db.Column(db.String(255), nullable=True) # filename of uploaded ID
+    id_verified = db.Column(db.Boolean, default=False) # admin verification status
     
     # Relationships
     tutor_bookings = db.relationship('Booking', foreign_keys='Booking.tutor_id', backref='tutor', lazy=True)
     reviews = db.relationship('Review', backref='tutor_profile', lazy=True)
+    id_verification = db.relationship('IDVerification', backref='tutor_profile', uselist=False)
 
 class StudentProfile(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -71,3 +75,12 @@ class Notification(db.Model):
     message = db.Column(db.String(255), nullable=False)
     is_read = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class IDVerification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    tutor_profile_id = db.Column(db.Integer, db.ForeignKey('tutor_profile.id'), nullable=False)
+    id_document = db.Column(db.String(255), nullable=False) # filename of uploaded ID
+    submission_date = db.Column(db.DateTime, default=datetime.utcnow)
+    status = db.Column(db.String(50), default='pending') # 'pending', 'approved', 'rejected'
+    admin_notes = db.Column(db.Text, nullable=True)
+    verified_by_admin = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)

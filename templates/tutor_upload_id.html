@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block title %}Upload ID for Verification - EduTutor{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm feature-card p-5">
+                <h3 class="fw-bold text-dark mb-2 d-flex align-items-center">
+                    <span class="me-2 fs-4">🆔</span> Tutor ID Verification
+                </h3>
+                <p class="text-muted mb-4">Upload a valid government-issued ID for admin verification. This helps us build a trusted community of tutors.</p>
+
+                {% if id_verification %}
+                    <div class="alert alert-info border-0 rounded-4 mb-4">
+                        <strong>Status:</strong>
+                        {% if id_verification.status == 'pending' %}
+                            <span class="badge bg-warning text-dark rounded-pill">⏳ Pending Review</span>
+                        {% elif id_verification.status == 'approved' %}
+                            <span class="badge bg-success rounded-pill">✓ Verified & Trusted Tutor</span>
+                        {% elif id_verification.status == 'rejected' %}
+                            <span class="badge bg-danger rounded-pill">✕ Rejected</span>
+                            {% if id_verification.admin_notes %}
+                                <p class="mt-2"><strong>Admin Notes:</strong> {{ id_verification.admin_notes }}</p>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+
+                    {% if id_verification.status != 'approved' %}
+                        <hr>
+                        <h5 class="fw-bold mt-5 mb-3">Upload New ID Document</h5>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <div class="display-1 mb-3">🎉</div>
+                            <h4 class="fw-bold text-success">Congratulations!</h4>
+                            <p class="text-muted">Your ID has been verified. You are now a trusted tutor.</p>
+                            <a href="{{ url_for('dashboard') }}" class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm mt-3">Back to Dashboard</a>
+                        </div>
+                    {% endif %}
+                {% endif %}
+
+                {% if not id_verification or id_verification.status != 'approved' %}
+                    <form method="POST" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-bold text-dark mb-3">Select ID Document (PDF, JPG, PNG, GIF)</label>
+                            <div class="border-2 border-dashed rounded-4 p-5 text-center" style="border-color: #dee2e6; cursor: pointer;" id="uploadArea">
+                                <div class="fs-1 mb-2">📄</div>
+                                <p class="text-muted mb-2">Click to select or drag and drop</p>
+                                <small class="text-muted">Accepted formats: PDF, JPG, PNG, GIF (Max 16MB)</small>
+                                <input type="file" name="id_document" id="fileInput" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.gif" required>
+                            </div>
+                            <small id="fileName" class="text-success mt-2 d-none">✓ File selected: <span id="fileNameText"></span></small>
+                        </div>
+
+                        <div class="alert alert-light rounded-4 p-3 mb-4">
+                            <small class="text-muted">
+                                <strong>⚠️ Important:</strong> Please upload a clear photo of your government-issued ID (passport, driver's license, national ID, etc.). 
+                                Blurry or incomplete documents may be rejected. Admins review all submissions within 24-48 hours.
+                            </small>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold rounded-pill shadow-sm py-3">
+                            📤 Upload & Submit for Verification
+                        </button>
+                    </form>
+
+                    <script>
+                        const uploadArea = document.getElementById('uploadArea');
+                        const fileInput = document.getElementById('fileInput');
+                        const fileName = document.getElementById('fileName');
+                        const fileNameText = document.getElementById('fileNameText');
+
+                        uploadArea.addEventListener('click', () => fileInput.click());
+                        uploadArea.addEventListener('dragover', (e) => {
+                            e.preventDefault();
+                            uploadArea.style.borderColor = '#0d6efd';
+                            uploadArea.style.backgroundColor = 'rgba(13, 110, 253, 0.1)';
+                        });
+                        uploadArea.addEventListener('dragleave', () => {
+                            uploadArea.style.borderColor = '#dee2e6';
+                            uploadArea.style.backgroundColor = 'transparent';
+                        });
+                        uploadArea.addEventListener('drop', (e) => {
+                            e.preventDefault();
+                            uploadArea.style.borderColor = '#dee2e6';
+                            uploadArea.style.backgroundColor = 'transparent';
+                            fileInput.files = e.dataTransfer.files;
+                            updateFileName();
+                        });
+
+                        fileInput.addEventListener('change', updateFileName);
+
+                        function updateFileName() {
+                            if (fileInput.files.length > 0) {
+                                fileNameText.textContent = fileInput.files[0].name;
+                                fileName.classList.remove('d-none');
+                            } else {
+                                fileName.classList.add('d-none');
+                            }
+                        }
+                    </script>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

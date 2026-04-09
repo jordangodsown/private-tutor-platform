@@ -62,6 +62,16 @@
                         <li class="nav-item">
                             <a class="nav-link nav-hover-glow" href="{{ url_for('dashboard') }}">Dashboard</a>
                         </li>
+                        {% if current_user.is_admin %}
+                        <li class="nav-item">
+                            <a class="nav-link nav-hover-glow text-warning fw-bold" href="{{ url_for('admin_panel') }}">🔐 Admin Panel</a>
+                        </li>
+                        {% endif %}
+                        {% if current_user.role == 'tutor' %}
+                        <li class="nav-item">
+                            <a class="nav-link nav-hover-glow text-info" href="{{ url_for('tutor_upload_id') }}">📋 Verify ID</a>
+                        </li>
+                        {% endif %}
                         <li class="nav-item">
                             <a class="nav-link btn btn-danger ms-3 px-3 py-2 fw-bold text-white rounded-pill" href="{{ url_for('logout') }}">Logout</a>
                         </li>
