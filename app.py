@@ -22,6 +22,7 @@ if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_pre_ping': True}
 
 # Mail config (Using env vars, or placeholders to be filled)
 app.config['MAIL_SERVER'] = 'smtp.gmail.com'
@@ -153,31 +154,49 @@ def book_tutor(tutor_id):
     date_str = request.form.get('date')
     time_str = request.form.get('time')
     
-    booking_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-    booking_time = datetime.strptime(time_str, '%H:%M').time()
+    try:
+        booking_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        if time_str.count(':') == 2:
+            booking_time = datetime.strptime(time_str, '%H:%M:%S').time()
+        else:
+            booking_time = datetime.strptime(time_str, '%H:%M').time()
+    except Exception as e:
+        print(f"Error parsing date/time: {e} (date: {date_str}, time: {time_str})")
+        flash('Invalid date or time format. Please try again.', 'danger')
+        return redirect(url_for('tutors'))
     
-    new_booking = Booking(
-        student_id=current_user.id,
-        tutor_id=tutor_id,
-        subject=subject,
-        date=booking_date,
-        time=booking_time
-    )
-    db.session.add(new_booking)
-    db.session.commit()
+    try:
+        new_booking = Booking(
+            student_id=current_user.id,
+            tutor_id=tutor_id,
+            subject=subject,
+            date=booking_date,
+            time=booking_time
+        )
+        db.session.add(new_booking)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print(f"Database error during booking: {e}")
+        flash('An error occurred saving your booking. Please try again later.', 'danger')
+        return redirect(url_for('tutors'))
     
     # Create notification for tutor
     tutor_profile = TutorProfile.query.get(tutor_id)
     if tutor_profile:
-        notification = Notification(
-            user_id=tutor_profile.user.id,
-            message=f"New tutoring request from {current_user.username} for {subject}."
-        )
-        db.session.add(notification)
-        db.session.commit()
+        try:
+            notification = Notification(
+                user_id=tutor_profile.user_id,
+                message=f"New tutoring request from {current_user.username} for {subject}."
+            )
+            db.session.add(notification)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"Database error creating notification: {e}")
     
     # Send email to tutor
-    if tutor_profile and tutor_profile.user.email:
+    if tutor_profile and tutor_profile.user and tutor_profile.user.email:
         msg = MailMessage('New Tutoring Session Request', recipients=[tutor_profile.user.email])
         msg.body = f"Hello {tutor_profile.user.username},\n\nYou have a new tutoring session request from {current_user.username} for {subject} on {booking_date} at {booking_time}.\nPlease log in to your dashboard to confirm or decline."
         try:
@@ -185,7 +204,7 @@ def book_tutor(tutor_id):
             flash('Booking request and email sent successfully!', 'success')
         except Exception as e:
             print(f"Error sending email: {e}")
-            flash('Booking requested, but failed to send email. Ensure your .env file has a valid Gmail App Password!', 'warning')
+            flash('Booking requested, but failed to send email alert. Ensure your .env file has a valid Gmail App Password!', 'warning')
     else:
         flash('Booking request sent successfully!', 'success')
         
@@ -202,6 +221,9 @@ def update_profile():
         hourly_rate = request.form.get('hourly_rate')
         
         profile = current_user.tutor_profile
+        if not profile:
+            profile = TutorProfile(user_id=current_user.id)
+            db.session.add(profile)
         profile.subjects = subjects
         profile.hourly_rate = float(hourly_rate) if hourly_rate else 0.0
         profile.bio = bio
@@ -209,6 +231,9 @@ def update_profile():
         grade_level = request.form.get('grade_level')
         
         profile = current_user.student_profile
+        if not profile:
+            profile = StudentProfile(user_id=current_user.id)
+            db.session.add(profile)
         profile.grade_level = grade_level
         profile.bio = bio
     else:
