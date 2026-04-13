@@ -6,3 +6,4 @@ my-new-project/
 .venv/
 venv/
 env/
+static/uploads/
