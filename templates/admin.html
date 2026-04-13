@@ -36,7 +36,11 @@
                                     <td class="fw-bold">{{ verification.tutor_profile.user.username }}</td>
                                     <td>{{ verification.tutor_profile.user.email }}</td>
                                     <td>
+                                        {% if 'http' in verification.id_document %}
+                                        <a href="{{ verification.id_document }}" target="_blank" class="btn btn-sm btn-info rounded-pill">View Document</a>
+                                        {% else %}
                                         <a href="{{ url_for('static', filename='uploads/profiles/' + verification.id_document) }}" target="_blank" class="btn btn-sm btn-info rounded-pill">View Document</a>
+                                        {% endif %}
                                     </td>
                                     <td><small class="text-muted">{{ verification.submission_date.strftime('%b %d, %Y') }}</small></td>
                                     <td>

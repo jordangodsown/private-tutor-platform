@@ -30,7 +30,11 @@
                         <div class="mb-4 text-center">
                             {% set profile = current_user.tutor_profile if current_user.role == 'tutor' else current_user.student_profile %}
                             {% if profile and profile.profile_photo and profile.profile_photo != 'default.jpg' %}
-                                <img src="{{ url_for('static', filename='uploads/profiles/' + profile.profile_photo) }}" alt="Profile Photo" class="rounded-circle mb-3 object-fit-cover shadow-sm border" style="width: 100px; height: 100px;">
+                                {% if 'http' in profile.profile_photo %}
+                                    <img src="{{ profile.profile_photo }}" alt="Profile Photo" class="rounded-circle mb-3 object-fit-cover shadow-sm border" style="width: 100px; height: 100px;">
+                                {% else %}
+                                    <img src="{{ url_for('static', filename='uploads/profiles/' + profile.profile_photo) }}" alt="Profile Photo" class="rounded-circle mb-3 object-fit-cover shadow-sm border" style="width: 100px; height: 100px;">
+                                {% endif %}
                             {% else %}
                                 <img src="https://ui-avatars.com/api/?name={{ current_user.username }}&background=0d6efd&color=fff&size=100&bold=true" alt="Default Avatar" class="rounded-circle mb-3 object-fit-cover shadow-sm border" style="width: 100px; height: 100px;">
                             {% endif %}

@@ -14,6 +14,9 @@ from models import db, User, TutorProfile, StudentProfile, Booking, Review, Mess
 from functools import wraps
 
 from datetime import datetime
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 app = Flask(__name__)
 csrf = CSRFProtect(app)
@@ -41,6 +44,13 @@ app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', 'your_email@gmail.com')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', 'your_app_password')
 app.config['MAIL_DEFAULT_SENDER'] = app.config['MAIL_USERNAME']
+
+# Configure Cloudinary
+cloudinary.config(
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.environ.get('CLOUDINARY_API_KEY'),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET')
+)
 
 # Upload config
 app.config['UPLOAD_FOLDER'] = os.path.join(BaseDir, 'static', 'uploads', 'profiles')
@@ -260,14 +270,12 @@ def update_profile():
         return redirect(url_for('dashboard'))
     
     if profile_photo and profile_photo.filename != '':
-        filename = secure_filename(profile_photo.filename)
-        # Create user specific or unique prefix
-        unique_filename = f"{current_user.id}_{filename}"
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-        # ensure folder exists
-        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-        profile_photo.save(filepath)
-        profile.profile_photo = unique_filename
+        try:
+            upload_result = cloudinary.uploader.upload(profile_photo)
+            profile.profile_photo = upload_result['secure_url']
+        except Exception as e:
+            print(f"Cloudinary upload failed: {e}")
+            flash('Error uploading photo to cloud storage.', 'warning')
     
     db.session.commit()
     flash('Profile updated successfully!', 'success')
@@ -411,11 +419,8 @@ def tutor_upload_id():
             return redirect(url_for('tutor_upload_id'))
         
         try:
-            filename = secure_filename(id_document.filename)
-            unique_filename = f"{current_user.id}_id_{filename}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-            os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-            id_document.save(filepath)
+            upload_result = cloudinary.uploader.upload(id_document)
+            unique_filename = upload_result['secure_url']
             
             # Update or create ID verification record
             tutor_profile = current_user.tutor_profile

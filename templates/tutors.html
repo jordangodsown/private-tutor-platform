@@ -29,9 +29,15 @@
                 <div class="card-body d-flex flex-column">
                     <div class="d-flex align-items-center mb-3">
                         {% if tutor.profile_photo and tutor.profile_photo != 'default.jpg' %}
-                        <img src="{{ url_for('static', filename='uploads/profiles/' + tutor.profile_photo) }}"
-                            alt="Profile Photo" class="rounded-circle me-3 object-fit-cover shadow-sm border"
-                            style="width: 55px; height: 55px;">
+                            {% if 'http' in tutor.profile_photo %}
+                            <img src="{{ tutor.profile_photo }}"
+                                alt="Profile Photo" class="rounded-circle me-3 object-fit-cover shadow-sm border"
+                                style="width: 55px; height: 55px;">
+                            {% else %}
+                            <img src="{{ url_for('static', filename='uploads/profiles/' + tutor.profile_photo) }}"
+                                alt="Profile Photo" class="rounded-circle me-3 object-fit-cover shadow-sm border"
+                                style="width: 55px; height: 55px;">
+                            {% endif %}
                         {% else %}
                         <img src="https://ui-avatars.com/api/?name={{ tutor.user.username }}&background=0d6efd&color=fff&size=100&bold=true"
                             alt="Default Avatar" class="rounded-circle me-3 object-fit-cover shadow-sm border"
