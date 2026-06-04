@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
-from flask import Flask, render_template, redirect, url_for, flash, request
+from flask import Flask, render_template, redirect, url_for, flash, request, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import CSRFProtect
@@ -60,6 +60,21 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 # 16 MB limit
 # Initialize extensions
 db.init_app(app)
 mail = Mail(app)
+
+# Proxy Fix for SSL on Render
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+# Configure OAuth client
+from authlib.integrations.flask_client import OAuth
+oauth = OAuth(app)
+google = oauth.register(
+    name='google',
+    client_id=os.environ.get('GOOGLE_CLIENT_ID'),
+    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'}
+)
 
 def send_async_email(app, msg):
     with app.app_context():
@@ -145,6 +160,70 @@ def login():
             flash('Invalid email or password.', 'danger')
 
     return render_template('login.html')
+
+@app.route('/login/google')
+def login_google():
+    role = request.args.get('role', 'student')
+    session['oauth_role'] = role
+    redirect_uri = url_for('google_authorize', _external=True)
+    return google.authorize_redirect(redirect_uri)
+
+@app.route('/login/google/authorize')
+def google_authorize():
+    try:
+        token = google.authorize_access_token()
+    except Exception as e:
+        print(f"Google OAuth authorization failed: {e}")
+        flash('Google authorization failed.', 'danger')
+        return redirect(url_for('login'))
+        
+    user_info = token.get('userinfo')
+    if not user_info:
+        flash('Failed to retrieve user info from Google.', 'danger')
+        return redirect(url_for('login'))
+    
+    email = user_info.get('email')
+    name = user_info.get('name', email.split('@')[0])
+    
+    # Check if user exists
+    user = User.query.filter_by(email=email).first()
+    if not user:
+        # Create new user
+        role = session.pop('oauth_role', 'student')
+        
+        # Check if base username is already taken
+        import secrets
+        base_username = name
+        username = base_username
+        counter = 1
+        while User.query.filter_by(username=username).first():
+            username = f"{base_username}{counter}"
+            counter += 1
+            
+        # Generate a random password since password is non-nullable
+        random_pw = secrets.token_hex(16)
+        hashed_pw = generate_password_hash(random_pw, method='pbkdf2:sha256')
+        
+        user = User(username=username, email=email, password=hashed_pw, role=role)
+        db.session.add(user)
+        db.session.commit()
+        
+        # Create corresponding profile
+        if role == 'tutor':
+            profile = TutorProfile(user_id=user.id)
+        else:
+            profile = StudentProfile(user_id=user.id)
+        db.session.add(profile)
+        db.session.commit()
+        
+        flash('Account created successfully via Google!', 'success')
+    else:
+        # If the user already exists, consume oauth_role from session just to clean it up
+        session.pop('oauth_role', None)
+        
+    login_user(user)
+    flash('Logged in successfully via Google.', 'success')
+    return redirect(url_for('dashboard'))
 
 @app.route('/logout')
 @login_required
