@@ -12,6 +12,7 @@ from werkzeug.utils import secure_filename
 from flask_mail import Mail, Message as MailMessage
 from models import db, User, TutorProfile, StudentProfile, Booking, Review, Message, Notification, IDVerification
 from functools import wraps
+from threading import Thread
 
 from datetime import datetime
 import cloudinary
@@ -60,6 +61,13 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 # 16 MB limit
 db.init_app(app)
 mail = Mail(app)
 
+def send_async_email(app, msg):
+    with app.app_context():
+        try:
+            mail.send(msg)
+        except Exception as e:
+            print(f"Background email failed (expected on Render free tier without setup): {e}")
+
 login_manager = LoginManager()
 login_manager.login_view = 'login'
 login_manager.init_app(app)
@@ -70,7 +78,10 @@ def load_user(user_id):
 
 # Initialize Database Context
 with app.app_context():
-    db.create_all()
+    try:
+        db.create_all()
+    except Exception as e:
+        print(f"Warning: Database initialization failed on startup (app will still boot): {e}")
 
 @app.context_processor
 def inject_notifications():
@@ -225,12 +236,9 @@ def book_tutor(tutor_id):
         if tutor_profile.user and tutor_profile.user.email:
             msg = MailMessage('New Tutoring Session Request', recipients=[tutor_profile.user.email])
             msg.body = f"Hello {tutor_profile.user.username},\n\nYou have a new tutoring session request from {current_user.username} for {subject} on {booking_date} at {booking_time}.\nPlease log in to your dashboard to confirm or decline."
-            try:
-                mail.send(msg)
-                flash('Booking request and email sent successfully!', 'success')
-            except Exception as e:
-                print(f"Error sending email: {e}")
-                flash('Booking requested, but failed to send email alert. Ensure your .env file has a valid Gmail App Password!', 'warning')
+            # Send email in background thread so it doesn't freeze the app
+            Thread(target=send_async_email, args=(app, msg)).start()
+            flash('Booking request sent successfully (email notification queued)!', 'success')
         else:
             flash('Booking request sent successfully!', 'success')
     else:
@@ -311,10 +319,7 @@ def update_booking_status(booking_id):
         if student_user and student_user.email:
             msg = MailMessage('Tutoring Session Confirmed', recipients=[student_user.email])
             msg.body = f"Hello {student_user.username},\n\nYour tutoring session for {booking.subject} on {booking.date} at {booking.time} has been confirmed by your tutor.\n\nSee you then!"
-            try:
-                mail.send(msg)
-            except Exception as e:
-                print(f"Error sending email: {e}")
+            Thread(target=send_async_email, args=(app, msg)).start()
     
     flash('Booking status updated.', 'success')
     return redirect(url_for('dashboard'))
