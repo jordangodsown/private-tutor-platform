@@ -95,6 +95,17 @@ def load_user(user_id):
 with app.app_context():
     try:
         db.create_all()
+        # Auto-migration: Ensure new columns exist on Render (Postgres)
+        if 'postgresql' in database_url:
+            from sqlalchemy import text
+            try:
+                db.session.execute(text("ALTER TABLE tutor_profile ADD COLUMN IF NOT EXISTS id_verified BOOLEAN DEFAULT FALSE;"))
+                db.session.execute(text("ALTER TABLE tutor_profile ADD COLUMN IF NOT EXISTS id_document VARCHAR(255);"))
+                db.session.commit()
+                print("Postgres database migrations applied successfully.")
+            except Exception as migration_error:
+                db.session.rollback()
+                print(f"Postgres auto-migration warning: {migration_error}")
     except Exception as e:
         print(f"Warning: Database initialization failed on startup (app will still boot): {e}")
 
