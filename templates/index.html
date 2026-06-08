@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}EduTutor - Find Your Perfect Private Tutor{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section text-center text-white d-flex align-items-center mb-5">
+    <div class="container container-glass p-5 rounded-4 shadow-lg slide-up">
+        <h1 class="display-3 fw-bold mb-4 text-white">Unlock Your Potential</h1>
+        <p class="lead mb-5 px-md-5 text-light">Connect with expert private tutors for personalized learning. Whether you're struggling with math or want to master a new language, EduTutor has the right mentor for you.</p>
+        
+        <form action="{{ url_for('tutors') }}" method="GET" class="search-form d-flex justify-content-center mx-auto" style="max-width: 600px;">
+            <div class="input-group input-group-lg shadow-sm">
+                <input type="text" name="subject" class="form-control px-4" placeholder="What do you want to learn? (e.g., Mathematics)" aria-label="Search Subjects">
+                <button class="btn btn-primary px-5 fw-bold" type="submit">Search</button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="container mb-5 py-5 text-center">
+<!-- Book Carousel Section -->
+<div class="row justify-content-center mb-5 slide-up">
+    <div class="col-lg-10">
+        <div id="bookCarousel" class="carousel slide carousel-fade shadow-lg rounded-4 overflow-hidden" data-bs-ride="carousel">
+            <div class="carousel-indicators">
+                <button type="button" data-bs-target="#bookCarousel" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
+                <button type="button" data-bs-target="#bookCarousel" data-bs-slide-to="1" aria-label="Slide 2"></button>
+                <button type="button" data-bs-target="#bookCarousel" data-bs-slide-to="2" aria-label="Slide 3"></button>
+            </div>
+            <div class="carousel-inner">
+                <div class="carousel-item active" data-bs-interval="4000">
+                    <img src="{{ url_for('static', filename='img/book1.png') }}" class="d-block w-100 object-fit-cover" style="height: 500px;" alt="Study Setup 1">
+                </div>
+                <div class="carousel-item" data-bs-interval="4000">
+                    <img src="{{ url_for('static', filename='img/book2.png') }}" class="d-block w-100 object-fit-cover" style="height: 500px;" alt="Study Setup 2">
+                </div>
+                <div class="carousel-item" data-bs-interval="4000">
+                    <img src="{{ url_for('static', filename='img/book3.png') }}" class="d-block w-100 object-fit-cover" style="height: 500px;" alt="Study Setup 3">
+                </div>
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#bookCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon rounded-circle bg-dark bg-opacity-50 p-3" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#bookCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon rounded-circle bg-dark bg-opacity-50 p-3" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+    <h2 class="fw-bold mb-5 text-dark">Why Choose EduTutor?</h2>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm feature-card p-4">
+                <div class="card-body">
+                    <div class="icon-circle bg-primary text-white mx-auto mb-3 fs-3 d-flex align-items-center justify-content-center">⭐</div>
+                    <h5 class="card-title fw-bold">Verified Experts</h5>
+                    <p class="card-text text-muted">All our tutors are rigorously verified to ensure the highest quality of education tailored to your needs.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm feature-card p-4">
+                <div class="card-body">
+                    <div class="icon-circle bg-success text-white mx-auto mb-3 fs-3 d-flex align-items-center justify-content-center">📅</div>
+                    <h5 class="card-title fw-bold">Flexible Scheduling</h5>
+                    <p class="card-text text-muted">Book sessions at your convenience. Our tutors work around your busy schedule.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 border-0 shadow-sm feature-card p-4">
+                <div class="card-body">
+                    <div class="icon-circle bg-info text-white mx-auto mb-3 fs-3 d-flex align-items-center justify-content-center">🎯</div>
+                    <h5 class="card-title fw-bold">Personalized Learning</h5>
+                    <p class="card-text text-muted">One-on-one sessions ensure that the teaching style adapts to your unique learning pace.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action -->
+<section class="cta-section bg-white py-5 mt-5 border-top">
+    <div class="container py-4">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6 slide-up">
+                <img src="{{ url_for('static', filename='img/tutoring_session.png') }}" alt="Tutoring Session" class="img-fluid rounded-4 shadow-lg object-fit-cover" style="height: 400px; width: 100%;">
+            </div>
+            <div class="col-lg-6 text-lg-start text-center fade-in">
+                <h2 class="fw-bold mb-3 text-gradient display-5">Ready to start teaching?</h2>
+                <p class="lead mb-4 text-muted">Join our community of expert tutors and earn by sharing your knowledge. Set your own rates, manage your own schedule, and make a real difference.</p>
+                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg px-5 fw-bold shadow-sm rounded-pill mt-2">Become a Tutor</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
