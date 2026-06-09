@@ -47,11 +47,16 @@ app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', 'your_app_password
 app.config['MAIL_DEFAULT_SENDER'] = app.config['MAIL_USERNAME']
 
 # Configure Cloudinary
+cloudinary_cloud_name = os.environ.get('CLOUDINARY_CLOUD_NAME')
+cloudinary_api_key = os.environ.get('CLOUDINARY_API_KEY')
+cloudinary_api_secret = os.environ.get('CLOUDINARY_API_SECRET')
 cloudinary.config(
-    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
-    api_key=os.environ.get('CLOUDINARY_API_KEY'),
-    api_secret=os.environ.get('CLOUDINARY_API_SECRET')
+    cloud_name=cloudinary_cloud_name,
+    api_key=cloudinary_api_key,
+    api_secret=cloudinary_api_secret
 )
+if not all([cloudinary_cloud_name, cloudinary_api_key, cloudinary_api_secret]):
+    print('Warning: Cloudinary credentials are not fully configured. ID and profile photo uploads may fail.')
 
 # Upload config
 app.config['UPLOAD_FOLDER'] = os.path.join(BaseDir, 'static', 'uploads', 'profiles')
@@ -520,11 +525,18 @@ def tutor_upload_id():
         
         try:
             upload_result = cloudinary.uploader.upload(id_document)
-            unique_filename = upload_result['secure_url']
-            
-            # Update or create ID verification record
-            tutor_profile = current_user.tutor_profile
-            if tutor_profile:
+                unique_filename = upload_result.get('secure_url')
+                
+                if not unique_filename:
+                    raise RuntimeError('Cloudinary upload did not return a secure URL.')
+
+                # Update or create ID verification record
+                tutor_profile = current_user.tutor_profile
+                if not tutor_profile:
+                    tutor_profile = TutorProfile(user_id=current_user.id)
+                    db.session.add(tutor_profile)
+                    db.session.commit()
+
                 tutor_profile.id_document = unique_filename
                 db.session.commit()
                 
@@ -544,13 +556,9 @@ def tutor_upload_id():
                 db.session.commit()
                 
                 flash('ID document uploaded successfully! Awaiting admin verification.', 'success')
-            else:
-                flash('Tutor profile not found.', 'danger')
-        except Exception as e:
-            print(f"Error uploading ID: {e}")
-            flash('An error occurred uploading your ID. Please try again.', 'danger')
-        
-        return redirect(url_for('tutor_upload_id'))
+            except Exception as e:
+                print(f"Error uploading ID: {e}")
+                flash(f'An error occurred uploading your ID: {e}', 'danger')
     
     tutor_profile = current_user.tutor_profile
     id_verification = IDVerification.query.filter_by(tutor_profile_id=tutor_profile.id).first() if tutor_profile else None
