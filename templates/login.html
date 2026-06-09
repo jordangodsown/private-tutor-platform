@@ -19,15 +19,28 @@
             <button type="submit" class="btn btn-primary btn-lg w-100 fw-bold shadow-sm rounded-pill mt-2">Sign In</button>
         </form>
         <div class="text-center my-3 text-muted small">— OR —</div>
-        <a href="{{ url_for('login_google') }}" class="btn btn-outline-dark btn-lg w-100 fw-bold shadow-sm rounded-pill d-flex align-items-center justify-content-center gap-2">
+        <div class="mb-4">
+            <label for="google-role" class="form-label text-muted">Continue as</label>
+            <select id="google-role" class="form-select form-select-lg custom-input">
+                <option value="student">Student</option>
+                <option value="tutor">Tutor</option>
+            </select>
+        </div>
+        <button id="google-signup-btn" type="button" class="btn btn-outline-dark btn-lg w-100 fw-bold shadow-sm rounded-pill d-flex align-items-center justify-content-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-google" viewBox="0 0 16 16">
                 <path d="M15.545 6.558a9.42 9.42 0 0 1 .139 1.626c0 2.434-.87 4.492-2.384 5.885h.002C11.978 15.292 10.158 16 8 16A8 8 0 1 1 8 0c2.204 0 4.09.811 5.614 2.157l-2.434 2.434c-.73-.7-1.761-1.127-3.18-1.127-2.733 0-4.962 2.26-4.962 5.05s2.229 5.05 4.962 5.05c3.153 0 4.335-2.227 4.516-3.387H8a1.82 1.82 0 0 0 0-3.638h7.545z"/>
             </svg>
             Sign in with Google
-        </a>
+        </button>
         <div class="text-center mt-4 pt-3 border-top">
             <p class="text-muted mb-0">Don't have an account? <a href="{{ url_for('register') }}" class="text-primary fw-bold text-decoration-none">Sign up</a></p>
         </div>
+        <script>
+            document.getElementById('google-signup-btn').addEventListener('click', function() {
+                const role = document.getElementById('google-role').value;
+                window.location.href = "{{ url_for('login_google') }}?role=" + role;
+            });
+        </script>
     </div>
 </div>
 {% endblock %}
