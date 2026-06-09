@@ -65,6 +65,65 @@
         </div>
     </div>
 
+    <!-- Tutor Profiles Tab -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm feature-card p-4">
+                <h4 class="fw-bold text-dark mb-4 d-flex align-items-center">
+                    <span class="me-2 fs-5">🎓</span> Tutor Profiles
+                </h4>
+                {% if tutor_profiles %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tutor</th>
+                                    <th>Email</th>
+                                    <th>Subjects</th>
+                                    <th>Hourly Rate</th>
+                                    <th>Verification</th>
+                                    <th>ID Document</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for profile in tutor_profiles %}
+                                <tr>
+                                    <td class="fw-bold">{{ profile.user.username }}</td>
+                                    <td>{{ profile.user.email }}</td>
+                                    <td>{{ profile.subjects if profile.subjects else 'Not set' }}</td>
+                                    <td>${{ profile.hourly_rate if profile.hourly_rate else 'TBD' }}</td>
+                                    <td>
+                                        {% if profile.id_verified %}
+                                            <span class="badge bg-success rounded-pill">Verified</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark rounded-pill">Unverified</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if profile.id_document %}
+                                            {% if 'http' in profile.id_document %}
+                                            <a href="{{ profile.id_document }}" target="_blank" class="btn btn-sm btn-info rounded-pill">View</a>
+                                            {% else %}
+                                            <a href="{{ url_for('static', filename='uploads/profiles/' + profile.id_document) }}" target="_blank" class="btn btn-sm btn-info rounded-pill">View</a>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">No document</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <p>No tutor profiles found.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
     <!-- Users Management Tab -->
     <div class="row">
         <div class="col-12">

@@ -465,7 +465,8 @@ def admin_required(f):
 def admin_panel():
     users = User.query.all()
     pending_verifications = IDVerification.query.filter_by(status='pending').all()
-    return render_template('admin.html', users=users, pending_verifications=pending_verifications)
+    tutor_profiles = TutorProfile.query.all()
+    return render_template('admin.html', users=users, pending_verifications=pending_verifications, tutor_profiles=tutor_profiles)
 
 @app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
 @admin_required
@@ -525,40 +526,40 @@ def tutor_upload_id():
         
         try:
             upload_result = cloudinary.uploader.upload(id_document)
-                unique_filename = upload_result.get('secure_url')
-                
-                if not unique_filename:
-                    raise RuntimeError('Cloudinary upload did not return a secure URL.')
+            unique_filename = upload_result.get('secure_url')
+            
+            if not unique_filename:
+                raise RuntimeError('Cloudinary upload did not return a secure URL.')
 
-                # Update or create ID verification record
-                tutor_profile = current_user.tutor_profile
-                if not tutor_profile:
-                    tutor_profile = TutorProfile(user_id=current_user.id)
-                    db.session.add(tutor_profile)
-                    db.session.commit()
+            # Update or create ID verification record
+            tutor_profile = current_user.tutor_profile
+            if not tutor_profile:
+                tutor_profile = TutorProfile(user_id=current_user.id)
+                db.session.add(tutor_profile)
+                db.session.commit()
 
-                tutor_profile.id_document = unique_filename
-                db.session.commit()
-                
-                # Create IDVerification record
-                existing_verification = IDVerification.query.filter_by(tutor_profile_id=tutor_profile.id).first()
-                if existing_verification:
-                    existing_verification.id_document = unique_filename
-                    existing_verification.submission_date = datetime.utcnow()
-                    existing_verification.status = 'pending'
-                else:
-                    verification = IDVerification(
-                        tutor_profile_id=tutor_profile.id,
-                        id_document=unique_filename,
-                        status='pending'
-                    )
-                    db.session.add(verification)
-                db.session.commit()
-                
-                flash('ID document uploaded successfully! Awaiting admin verification.', 'success')
-            except Exception as e:
-                print(f"Error uploading ID: {e}")
-                flash(f'An error occurred uploading your ID: {e}', 'danger')
+            tutor_profile.id_document = unique_filename
+            db.session.commit()
+            
+            # Create IDVerification record
+            existing_verification = IDVerification.query.filter_by(tutor_profile_id=tutor_profile.id).first()
+            if existing_verification:
+                existing_verification.id_document = unique_filename
+                existing_verification.submission_date = datetime.utcnow()
+                existing_verification.status = 'pending'
+            else:
+                verification = IDVerification(
+                    tutor_profile_id=tutor_profile.id,
+                    id_document=unique_filename,
+                    status='pending'
+                )
+                db.session.add(verification)
+            db.session.commit()
+            
+            flash('ID document uploaded successfully! Awaiting admin verification.', 'success')
+        except Exception as e:
+            print(f"Error uploading ID: {e}")
+            flash(f'An error occurred uploading your ID: {e}', 'danger')
     
     tutor_profile = current_user.tutor_profile
     id_verification = IDVerification.query.filter_by(tutor_profile_id=tutor_profile.id).first() if tutor_profile else None
