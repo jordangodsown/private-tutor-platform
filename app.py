@@ -141,7 +141,12 @@ def register():
         db.session.commit()
 
         if role == 'tutor':
-            new_profile = TutorProfile(user_id=new_user.id)
+            new_profile = TutorProfile(
+                user_id=new_user.id,
+                bio='',
+                subjects='',
+                hourly_rate=0.0
+            )
             db.session.add(new_profile)
             db.session.commit()
         elif role == 'student':
