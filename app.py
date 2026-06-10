@@ -36,9 +36,13 @@ if os.environ.get('DATABASE_URL'):
     database_url = os.environ.get('DATABASE_URL')
     if database_url.startswith("postgres://"):
         database_url = database_url.replace("postgres://", "postgresql://", 1)
+    print('Using DATABASE_URL from environment.')
 else:
     # Local development only - SQLite fallback
     database_url = 'sqlite:///' + os.path.join(BaseDir, 'private_tutor.db')
+    if os.environ.get('RENDER') or os.environ.get('RENDER_SERVICE_ID'):
+        raise RuntimeError('DATABASE_URL is required on Render to persist tutor profiles. Local SQLite will be lost on restart.')
+    print('Warning: DATABASE_URL not found. Falling back to local SQLite for development only.')
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
