@@ -134,17 +134,10 @@ def register():
         email = request.form.get('email')
         password = request.form.get('password')
         role = request.form.get('role')
-        admin_code = request.form.get('admin_code')
 
         existing_admin = User.query.filter_by(is_admin=True).first()
         is_admin = False
-        if admin_code:
-            admin_secret = os.environ.get('ADMIN_SIGNUP_CODE')
-            if admin_secret and admin_code == admin_secret and existing_admin is None:
-                is_admin = True
-            else:
-                flash('Invalid admin code or an admin already exists; admin request ignored.', 'warning')
-        elif existing_admin is None:
+        if existing_admin is None:
             is_admin = True
             flash('This is the first registered account, so it has been created as the admin.', 'info')
 
@@ -375,7 +368,13 @@ def update_profile():
     bio = request.form.get('bio')
     profile_photo = request.files.get('profile_photo')
     
-    if current_user.role == 'tutor':
+    if current_user.is_admin:
+        profile = current_user.tutor_profile or current_user.student_profile
+        if not profile:
+            profile = StudentProfile(user_id=current_user.id)
+            db.session.add(profile)
+        profile.bio = bio
+    elif current_user.role == 'tutor':
         subjects = request.form.get('subjects')
         hourly_rate = request.form.get('hourly_rate')
         

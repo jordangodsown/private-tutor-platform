@@ -40,7 +40,16 @@
                             {% endif %}
                             <input class="form-control form-control-sm custom-input" type="file" name="profile_photo" accept="image/*">
                         </div>
-                        {% if current_user.role == 'tutor' %}
+                        {% if current_user.is_admin %}
+                        <div class="mb-3">
+                            <label class="form-label text-muted fw-bold small">Admin Information</label>
+                            <input type="text" class="form-control custom-input" disabled value="{{ current_user.email }}">
+                            <small class="text-muted">Admin accounts do not require tutor/student profile fields.</small>
+                        </div>
+                        <div class="mb-3">
+                            <a href="{{ url_for('admin_panel') }}" class="btn btn-outline-primary w-100 rounded-pill">Go to Admin Panel</a>
+                        </div>
+                        {% elif current_user.role == 'tutor' %}
                         <div class="mb-3">
                             <label class="form-label text-muted fw-bold small">Subjects Taught</label>
                             <input type="text" name="subjects" class="form-control custom-input" value="{{ profile.subjects or '' }}" placeholder="Comma separated">
@@ -57,7 +66,7 @@
                         {% endif %}
                         <div class="mb-4">
                             <label class="form-label text-muted fw-bold small">Bio</label>
-                            <textarea name="bio" class="form-control custom-input" rows="4" placeholder="Tell {% if current_user.role == 'tutor' %}students{% else %}tutors{% endif %} about yourself...">{{ profile.bio or '' }}</textarea>
+                            <textarea name="bio" class="form-control custom-input" rows="4" placeholder="Tell {% if current_user.is_admin %}admin team{% elif current_user.role == 'tutor' %}students{% else %}tutors{% endif %} about yourself...">{{ profile.bio or '' }}</textarea>
                         </div>
                         <button type="submit" class="btn btn-primary w-100 fw-bold rounded-pill shadow-sm py-2">Update Profile</button>
                     </form>
