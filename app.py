@@ -166,10 +166,12 @@ def register():
             )
             db.session.add(new_profile)
             db.session.commit()
+            print(f"✓ Tutor profile created and saved for user {new_user.id}")
         elif role == 'student':
             new_profile = StudentProfile(user_id=new_user.id)
             db.session.add(new_profile)
             db.session.commit()
+            print(f"✓ Student profile created and saved for user {new_user.id}")
 
         flash('Account created successfully! You can now login.', 'success')
         return redirect(url_for('login'))
@@ -273,11 +275,16 @@ def logout():
 @app.route('/tutors')
 def tutors():
     subject_query = request.args.get('subject', '')
-    if subject_query:
-        # Search by subject
-        tutors = TutorProfile.query.filter(TutorProfile.subjects.ilike(f'%{subject_query}%')).all()
-    else:
-        tutors = TutorProfile.query.all()
+    try:
+        if subject_query:
+            # Search by subject
+            tutors = TutorProfile.query.filter(TutorProfile.subjects.ilike(f'%{subject_query}%')).all()
+        else:
+            tutors = TutorProfile.query.all()
+        print(f"✓ Found {len(tutors)} tutors in database")
+    except Exception as e:
+        print(f"✗ Error fetching tutors: {e}")
+        tutors = []
     return render_template('tutors.html', tutors=tutors, query=subject_query, today=datetime.utcnow().date().isoformat())
 
 @app.route('/dashboard')
