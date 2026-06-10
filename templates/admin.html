@@ -11,6 +11,45 @@
         </div>
     </div>
 
+    <div class="row g-3 mb-5">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="fs-5 fw-semibold">Users</span>
+                    <span class="badge bg-primary rounded-pill">{{ total_users }}</span>
+                </div>
+                <small class="text-muted">Total registered accounts</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="fs-5 fw-semibold">Tutors</span>
+                    <span class="badge bg-success rounded-pill">{{ total_tutors }}</span>
+                </div>
+                <small class="text-muted">Tutor accounts</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="fs-5 fw-semibold">Students</span>
+                    <span class="badge bg-secondary rounded-pill">{{ total_students }}</span>
+                </div>
+                <small class="text-muted">Student accounts</small>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm p-3 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="fs-5 fw-semibold">Bookings</span>
+                    <span class="badge bg-info rounded-pill">{{ total_bookings }}</span>
+                </div>
+                <small class="text-muted">Total sessions booked</small>
+            </div>
+        </div>
+    </div>
+
     <!-- Verification Requests Tab -->
     <div class="row mb-5">
         <div class="col-12">
@@ -120,6 +159,126 @@
                         <p>No tutor profiles found.</p>
                     </div>
                 {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Monitoring Tab -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm feature-card p-4">
+                <h4 class="fw-bold text-dark mb-4 d-flex align-items-center">
+                    <span class="me-2 fs-5">📈</span> Platform Monitoring
+                </h4>
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="bg-light rounded-4 p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <span class="fw-semibold">Pending Verifications</span>
+                                <span class="badge bg-warning text-dark rounded-pill">{{ verification_counts.pending }}</span>
+                            </div>
+                            <small class="text-muted">Tutor ID requests waiting for review</small>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="bg-light rounded-4 p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <span class="fw-semibold">Approved Verifications</span>
+                                <span class="badge bg-success rounded-pill">{{ verification_counts.approved }}</span>
+                            </div>
+                            <small class="text-muted">Verified tutor accounts</small>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="bg-light rounded-4 p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <span class="fw-semibold">Confirmed Bookings</span>
+                                <span class="badge bg-info rounded-pill">{{ booking_counts.confirmed }}</span>
+                            </div>
+                            <small class="text-muted">Sessions approved by tutors</small>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-3">
+                        <div class="bg-light rounded-4 p-4 h-100">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <span class="fw-semibold">Completed Sessions</span>
+                                <span class="badge bg-primary rounded-pill">{{ booking_counts.completed }}</span>
+                            </div>
+                            <small class="text-muted">Finished tutoring sessions</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-6 mb-4">
+                        <div class="card border-0 shadow-sm p-3 h-100">
+                            <h5 class="fw-semibold mb-3">Recent Bookings</h5>
+                            {% if recent_bookings %}
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Student</th>
+                                            <th>Tutor</th>
+                                            <th>Subject</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for booking in recent_bookings %}
+                                        <tr>
+                                            <td>{{ booking.student.username }}</td>
+                                            <td>{{ booking.tutor.user.username }}</td>
+                                            <td>{{ booking.subject }}</td>
+                                            <td>
+                                                <span class="badge {% if booking.status == 'confirmed' %}bg-success{% elif booking.status == 'completed' %}bg-primary{% elif booking.status == 'pending' %}bg-warning text-dark{% else %}bg-danger{% endif %} rounded-pill">
+                                                    {{ booking.status|capitalize }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                                <div class="text-center text-muted py-4">No recent bookings.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-lg-6 mb-4">
+                        <div class="card border-0 shadow-sm p-3 h-100">
+                            <h5 class="fw-semibold mb-3">Recent Verifications</h5>
+                            {% if recent_verifications %}
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Tutor</th>
+                                            <th>Status</th>
+                                            <th>Submitted</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for verification in recent_verifications %}
+                                        <tr>
+                                            <td>{{ verification.tutor_profile.user.username }}</td>
+                                            <td>
+                                                <span class="badge {% if verification.status == 'approved' %}bg-success{% elif verification.status == 'pending' %}bg-warning text-dark{% else %}bg-danger{% endif %} rounded-pill">
+                                                    {{ verification.status|capitalize }}
+                                                </span>
+                                            </td>
+                                            <td><small class="text-muted">{{ verification.submission_date.strftime('%b %d, %Y') }}</small></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                                <div class="text-center text-muted py-4">No recent verifications.</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block title %}Pending Verifications - Admin{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h3 class="mb-4">Pending Tutor Verifications</h3>
+
+    {% if pending_verifications %}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead class="table-light">
+                <tr>
+                    <th>Tutor</th>
+                    <th>Email</th>
+                    <th>ID Document</th>
+                    <th>Submitted</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for verification in pending_verifications %}
+                <tr>
+                    <td class="fw-bold">{{ verification.tutor_profile.user.username }}</td>
+                    <td>{{ verification.tutor_profile.user.email }}</td>
+                    <td>
+                        {% if 'http' in verification.id_document %}
+                        <a href="{{ verification.id_document }}" target="_blank" class="btn btn-sm btn-info rounded-pill">View</a>
+                        {% else %}
+                        <a href="{{ url_for('static', filename='uploads/profiles/' + verification.id_document) }}" target="_blank" class="btn btn-sm btn-info rounded-pill">View</a>
+                        {% endif %}
+                    </td>
+                    <td><small class="text-muted">{{ verification.submission_date.strftime('%b %d, %Y') }}</small></td>
+                    <td>
+                        <form method="POST" action="{{ url_for('admin_verify_tutor', verification_id=verification.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                            <textarea name="admin_notes" class="form-control form-control-sm mb-2" rows="2" placeholder="Notes (optional)"></textarea>
+                            <button type="submit" name="action" value="approve" class="btn btn-success btn-sm rounded-pill me-2">Approve</button>
+                            <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm rounded-pill">Reject</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-4 text-muted">No pending verifications.</div>
+    {% endif %}
+</div>
+{% endblock %}

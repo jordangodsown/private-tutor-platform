@@ -136,15 +136,17 @@ def register():
         role = request.form.get('role')
         admin_code = request.form.get('admin_code')
 
-        # Allow one-time admin signup using ADMIN_SIGNUP_CODE env var
+        existing_admin = User.query.filter_by(is_admin=True).first()
         is_admin = False
         if admin_code:
-            existing_admin = User.query.filter_by(is_admin=True).first()
             admin_secret = os.environ.get('ADMIN_SIGNUP_CODE')
             if admin_secret and admin_code == admin_secret and existing_admin is None:
                 is_admin = True
             else:
                 flash('Invalid admin code or an admin already exists; admin request ignored.', 'warning')
+        elif existing_admin is None:
+            is_admin = True
+            flash('This is the first registered account, so it has been created as the admin.', 'info')
 
         user_exists = User.query.filter_by(email=email).first()
         if user_exists:
@@ -234,9 +236,14 @@ def google_authorize():
             
         # Generate a random password since password is non-nullable
         random_pw = secrets.token_hex(16)
-        hashed_pw = generate_password_hash(random_pw, method='pbkdf2:sha256')
+        hashed_pw = generate_password_hash(random_pw, method='pbkdf2:pbkdf2:sha256')
         
-        user = User(username=username, email=email, password=hashed_pw, role=role)
+        existing_admin = User.query.filter_by(is_admin=True).first()
+        is_admin = existing_admin is None
+        if is_admin:
+            flash('This is the first account created via Google login, so it has been created as the admin.', 'info')
+
+        user = User(username=username, email=email, password=hashed_pw, role=role, is_admin=is_admin)
         db.session.add(user)
         db.session.commit()
         
@@ -478,10 +485,42 @@ def admin_required(f):
 @app.route('/admin')
 @admin_required
 def admin_panel():
-    users = User.query.all()
+    users = User.query.order_by(User.date_joined.desc()).all()
     pending_verifications = IDVerification.query.filter_by(status='pending').all()
-    tutor_profiles = TutorProfile.query.all()
-    return render_template('admin.html', users=users, pending_verifications=pending_verifications, tutor_profiles=tutor_profiles)
+    tutor_profiles = TutorProfile.query.order_by(TutorProfile.id.desc()).all()
+    total_users = User.query.count()
+    total_tutors = User.query.filter_by(role='tutor').count()
+    total_students = User.query.filter_by(role='student').count()
+    total_bookings = Booking.query.count()
+    total_reviews = Review.query.count()
+    booking_counts = {
+        'pending': Booking.query.filter_by(status='pending').count(),
+        'confirmed': Booking.query.filter_by(status='confirmed').count(),
+        'completed': Booking.query.filter_by(status='completed').count(),
+        'canceled': Booking.query.filter_by(status='canceled').count(),
+    }
+    verification_counts = {
+        'pending': IDVerification.query.filter_by(status='pending').count(),
+        'approved': IDVerification.query.filter_by(status='approved').count(),
+        'rejected': IDVerification.query.filter_by(status='rejected').count(),
+    }
+    recent_bookings = Booking.query.order_by(Booking.created_at.desc()).limit(8).all()
+    recent_verifications = IDVerification.query.order_by(IDVerification.submission_date.desc()).limit(8).all()
+    return render_template(
+        'admin.html',
+        users=users,
+        pending_verifications=pending_verifications,
+        tutor_profiles=tutor_profiles,
+        total_users=total_users,
+        total_tutors=total_tutors,
+        total_students=total_students,
+        total_bookings=total_bookings,
+        total_reviews=total_reviews,
+        booking_counts=booking_counts,
+        verification_counts=verification_counts,
+        recent_bookings=recent_bookings,
+        recent_verifications=recent_verifications
+    )
 
 @app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
 @admin_required
@@ -501,9 +540,8 @@ def admin_delete_user(user_id):
 @admin_required
 def admin_promote_user(user_id):
     user = User.query.get_or_404(user_id)
-    existing_admin = User.query.filter_by(is_admin=True).first()
-    if existing_admin:
-        flash('There is already an admin. Demote the existing admin before promoting another.', 'warning')
+    if user.is_admin:
+        flash(f'User {user.username} is already an admin.', 'info')
         return redirect(url_for('admin_panel'))
     user.is_admin = True
     db.session.commit()
