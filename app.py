@@ -1,9 +1,13 @@
 import os
 from dotenv import load_dotenv
+import zipfile
+import shutil
+import tempfile
+from io import BytesIO
 
 # Load environment variables from .env file
 load_dotenv()
-from flask import Flask, render_template, redirect, url_for, flash, request, session
+from flask import Flask, render_template, redirect, url_for, flash, request, session, send_file, after_this_request
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_wtf.csrf import CSRFProtect
@@ -16,6 +20,8 @@ from threading import Thread
 
 from datetime import datetime
 import cloudinary
+import tempfile
+import zipfile
 import cloudinary.uploader
 import cloudinary.api
 
@@ -669,6 +675,42 @@ def admin_verify_tutor(verification_id):
         flash(f'Tutor {tutor_user.username} verification rejected.', 'success')
     
     return redirect(url_for('admin_panel'))
+
+@app.route('/download')
+def download_source():
+    def create_zip_archive():
+        root_dir = BaseDir
+        tmp_dir = tempfile.mkdtemp()
+        zip_path = os.path.join(tmp_dir, 'private-tutor-platform.zip')
+        exclude_items = {'.git', '__pycache__', 'venv', '.venv', 'env', 'node_modules', '.env', 'private_tutor.db', 'render.yaml'}
+
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as archive:
+            for foldername, subfolders, filenames in os.walk(root_dir):
+                rel_folder = os.path.relpath(foldername, root_dir)
+                if rel_folder == '.':
+                    rel_folder = ''
+                if any(part in exclude_items for part in rel_folder.split(os.sep)):
+                    continue
+                for filename in filenames:
+                    if filename in exclude_items or filename.endswith(('.pyc', '.db')):
+                        continue
+                    source_path = os.path.join(foldername, filename)
+                    rel_path = os.path.join(rel_folder, filename) if rel_folder else filename
+                    archive.write(source_path, rel_path)
+        return zip_path
+
+    zip_path = create_zip_archive()
+
+    @after_this_request
+    def cleanup(response):
+        try:
+            os.remove(zip_path)
+            os.rmdir(os.path.dirname(zip_path))
+        except Exception as cleanup_error:
+            print(f"Cleanup after download failed: {cleanup_error}")
+        return response
+
+    return send_file(zip_path, as_attachment=True, download_name='private-tutor-platform.zip')
 
 if __name__ == '__main__':
     app.run(debug=True)
