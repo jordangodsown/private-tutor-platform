@@ -134,6 +134,17 @@ def register():
         email = request.form.get('email')
         password = request.form.get('password')
         role = request.form.get('role')
+        admin_code = request.form.get('admin_code')
+
+        # Allow one-time admin signup using ADMIN_SIGNUP_CODE env var
+        is_admin = False
+        if admin_code:
+            existing_admin = User.query.filter_by(is_admin=True).first()
+            admin_secret = os.environ.get('ADMIN_SIGNUP_CODE')
+            if admin_secret and admin_code == admin_secret and existing_admin is None:
+                is_admin = True
+            else:
+                flash('Invalid admin code or an admin already exists; admin request ignored.', 'warning')
 
         user_exists = User.query.filter_by(email=email).first()
         if user_exists:
@@ -141,7 +152,7 @@ def register():
             return redirect(url_for('register'))
 
         hashed_pw = generate_password_hash(password, method='pbkdf2:sha256')
-        new_user = User(username=username, email=email, password=hashed_pw, role=role)
+        new_user = User(username=username, email=email, password=hashed_pw, role=role, is_admin=is_admin)
         db.session.add(new_user)
         db.session.commit()
 
@@ -261,7 +272,7 @@ def tutors():
         tutors = TutorProfile.query.filter(TutorProfile.subjects.ilike(f'%{subject_query}%')).all()
     else:
         tutors = TutorProfile.query.all()
-    return render_template('tutors.html', tutors=tutors, query=subject_query)
+    return render_template('tutors.html', tutors=tutors, query=subject_query, today=datetime.utcnow().date().isoformat())
 
 @app.route('/dashboard')
 @login_required
@@ -297,6 +308,10 @@ def book_tutor(tutor_id):
             booking_time = datetime.strptime(time_str, '%H:%M:%S').time()
         else:
             booking_time = datetime.strptime(time_str, '%H:%M').time()
+        current_datetime = datetime.utcnow()
+        if booking_date < current_datetime.date() or (booking_date == current_datetime.date() and booking_time <= current_datetime.time()):
+            flash('The date/time you chose has already passed. Please select a future appointment.', 'warning')
+            return redirect(url_for('tutors'))
     except Exception as e:
         print(f"Error parsing date/time: {e} (date: {date_str}, time: {time_str})")
         flash('Invalid date or time format. Please try again.', 'danger')
@@ -486,10 +501,20 @@ def admin_delete_user(user_id):
 @admin_required
 def admin_promote_user(user_id):
     user = User.query.get_or_404(user_id)
+    existing_admin = User.query.filter_by(is_admin=True).first()
+    if existing_admin:
+        flash('There is already an admin. Demote the existing admin before promoting another.', 'warning')
+        return redirect(url_for('admin_panel'))
     user.is_admin = True
     db.session.commit()
     flash(f'User {user.username} promoted to admin.', 'success')
     return redirect(url_for('admin_panel'))
+
+@app.route('/admin/unverified')
+@admin_required
+def admin_unverified():
+    pending = IDVerification.query.filter_by(status='pending').all()
+    return render_template('admin_unverified.html', pending_verifications=pending)
 
 @app.route('/admin/demote_admin/<int:user_id>', methods=['POST'])
 @admin_required
